@@ -19,7 +19,7 @@ def setup_logging():
         file_handler = RotatingFileHandler(
             LOG_FILE_PATH,
             maxBytes=5*1024*1024,  
-            backupCount=5,         
+            backupCount=1, # Avoid taking up to much Sys Resources        
             encoding='utf-8'
         )
         file_handler.setLevel(logging.DEBUG) # LEVEL
