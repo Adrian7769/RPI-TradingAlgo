@@ -24,7 +24,6 @@ class TastyTradeAuth:
         self.client = httpx.AsyncClient()
         
     async def create_session(self, username: str, password: Optional[str] = None, remember_token: Optional[str] = None):
-        
         # Define Headers and API ENDPOINT to create a new session
         url = f"{self.base_url}/sessions"
         headers = {
@@ -32,23 +31,20 @@ class TastyTradeAuth:
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        payload = {"login": username}
+        payload = {"login": username, "remember-me": True}
        
         # Make Sure Params are Provided 
         if password:
-            payload[password] = password
+            payload["password"] = password
         elif remember_token:
-            payload[remember_token] = remember_token
+            payload["remember-token"] = remember_token
         else:
             raise ValueError("Either password or remember token must be provided")
         
-        # Always request a new remember token
-        payload["remember-me"] = True
-        
         # Make Post Request to API End Point to Open Up a New Session 
         try:
-            response = await self.client.post(url, headers=headers, payload=payload)
-            if response.status_code == 200:
+            response = await self.client.post(url, headers=headers, json=payload)
+            if response.status_code in [200, 201]:
                 data = response.json().get("data", {})
                 self.session_token = data.get("session-token")
                 self.remember_token = data.get("remember-token")

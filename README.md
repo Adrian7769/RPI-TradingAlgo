@@ -14,4 +14,8 @@ gpiozero
 RPLCD
 rpi-lgpio
 gsheets
+httpx 
+asyncio
+
+
 

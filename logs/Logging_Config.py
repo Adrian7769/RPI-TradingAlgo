@@ -6,8 +6,8 @@ from logging.handlers import RotatingFileHandler
 
 def setup_logging():
 
-    LOGS_DIR = os.path.join(os.getcwd(), 'logs')
-    os.makedirs(LOGS_DIR, exist_ok=True)  
+    LOGS_DIR = os.path.dirname(os.path.abspath(__file__))
+    os.makedirs(LOGS_DIR, exist_ok=True)   
 
     LOG_FILE_PATH = os.path.join(LOGS_DIR, 'System.log')
 
@@ -19,7 +19,7 @@ def setup_logging():
         file_handler = RotatingFileHandler(
             LOG_FILE_PATH,
             maxBytes=5*1024*1024,  
-            backupCount=1, # Avoid taking up to much Sys Resources        
+            backupCount=2, # Avoid taking up to much Sys Resources        
             encoding='utf-8'
         )
         file_handler.setLevel(logging.DEBUG) # LEVEL
@@ -27,7 +27,7 @@ def setup_logging():
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG) # LEVEL
 
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
