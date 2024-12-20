@@ -33,3 +33,19 @@ def setup_logging():
 
         root_logger.addHandler(file_handler)
         root_logger.addHandler(console_handler)
+
+def sanitize_payload(payload: dict) -> dict:
+    sanitized = payload.copy()
+    if 'password' in sanitized:
+        sanitized['password'] = '***REDACTED***'
+    if 'remember-token' in sanitized:
+        sanitized['remember-token'] = '***REDACTED***'
+    if 'session-token' in sanitized:
+        sanitized['session-token'] = '***REDACTED***'     
+    if 'email' in sanitized:
+        sanitized['email'] = '***REDACTED***'    
+    if 'Authorization' in sanitized:
+        sanitized['Authorization'] = '***REDACTED***'                
+    if 'login' in sanitized:
+        sanitized['login'] = '***REDACTED***'
+    return sanitized

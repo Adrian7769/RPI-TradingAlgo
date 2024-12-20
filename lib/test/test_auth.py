@@ -26,7 +26,6 @@ PASSWORD = os.getenv("TASTY_PASS")
 async def main():
     client = TastyTradeClient(base_url=BASE_URL, user_agent=USER_AGENT)
     try:
-        logger.info("Authentication with Tasty Trade Beginnning")
         await client.authenticate(username=USERNAME, password=PASSWORD)
         logger.info("Authenticatioin with Tasty Trade API Successful")
         
