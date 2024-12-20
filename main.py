@@ -8,7 +8,7 @@ import logging
 import subprocess
 import time
 from datetime import timedelta
-
+from lib import auth
 load_dotenv()
 
 # Logging setup
