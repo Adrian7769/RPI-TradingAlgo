@@ -1,4 +1,4 @@
-# Contains functions to fectch system data and interact with RPI Hardware
+# Contains functions to fectch system data and interact with RPI5 Hardware
 
 from logs.Logging_Config import setup_logging
 from gpiozero import TonalBuzzer
@@ -57,6 +57,9 @@ def display_info():
         lcd.write_string(load)
         lcd.cursor_pos = (1, 0)  
         lcd.write_string(temp)
+        lcd.write_string(
+            
+        )
     except Exception as e:
         logger.error(f"Failed to activate LCD display: {e}")
 

@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 from lib.auth import TastyTradeAuth
+from lib.utils import retry
 from lib.exceptions import (
     APIError,
     UnauthorizedError,
@@ -55,7 +56,8 @@ class TastyTradeClient:
             headers['Authorization'] = self.auth.session_token
             logger.debug("Added Authorization header to request.")
         return headers
-
+    
+    @retry(max_attempts=5, backoff_factor=2.0)
     async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         url = f"{self.base_url}{endpoint}"
         headers = self.get_headers()
@@ -73,8 +75,8 @@ class TastyTradeClient:
                 await self.auth.handle_error(response)
         except httpx.RequestError as e:
             logger.error(f"RequestError during GET request to {e.request.url!r}: {e}")
-            raise APIError(f"An Error Occurred while Sending Get Request to: {e.request.url!r}.") from e
-
+            
+    @retry(max_attempts=5, backoff_factor=2.0) 
     async def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         url = f"{self.base_url}{endpoint}"
         headers = self.get_headers()
@@ -93,7 +95,8 @@ class TastyTradeClient:
         except httpx.RequestError as e:
             logger.error(f"RequestError during POST request to {e.request.url!r}: {e}")
             raise APIError(f"An Error Occured while sending post request to: {e.request.url!r}") from e
-
+        
+    @retry(max_attempts=5, backoff_factor=2.0)
     async def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         url = f"{self.base_url}{endpoint}"
         headers = self.get_headers()
@@ -113,6 +116,7 @@ class TastyTradeClient:
             logger.error(f"RequestError during PUT request to {e.request.url!r}: {e}")
             raise APIError(f"An Error Occured While Sending put Request to: {e.request.url!r}") from e
 
+    @retry(max_attempts=5, backoff_factor=2.0)
     async def delete(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         url = f"{self.base_url}{endpoint}"
         headers = self.get_headers()

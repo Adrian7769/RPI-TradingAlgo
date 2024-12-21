@@ -1,3 +1,5 @@
+# Conatins TTAPI AUTH Test
+
 import os
 import asyncio
 import logging

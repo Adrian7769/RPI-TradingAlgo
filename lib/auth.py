@@ -17,6 +17,8 @@ from lib.exceptions import (
 from datetime import datetime, timedelta
 from typing import Optional
 from logs.Logging_Config import sanitize_payload
+from lib.utils.token_storage import save_token, load_token
+from lib.utils import retry
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,8 @@ class TastyTradeAuth:
         self.session_expiration: Optional[datetime] = None
         self.client = httpx.AsyncClient()
         logger.debug(f"Initialized TastyTradeAuth")
-
+        
+    @retry(max_attempts=3, backoff_factor=1.0)
     async def create_session(self, username: str, password: Optional[str] = None, remember_token: Optional[str] = None):
         logger.info("Attempting to create a new session.")
         url = f"{self.base_url}/sessions"
@@ -61,6 +64,8 @@ class TastyTradeAuth:
                 logger.debug(f"Session data received: {sanitize_payload(data)}")
                 self.session_token = data.get("session-token")
                 self.remember_token = data.get("remember-token")
+                if self.remember_token:
+                    save_token(self.remember_token)
                 expiration_str = data.get("session-expiration")
                 if expiration_str:
                     self.session_expiration = datetime.fromisoformat(expiration_str.rstrip("Z"))
@@ -74,7 +79,8 @@ class TastyTradeAuth:
         except httpx.RequestError as e:
             logger.error(f"RequestError while creating session: {e}")
             raise APIError(f"An Error Occurred while requesting {e.request.url!r}") from e
-
+        
+    @retry(max_attempts=3, backoff_factor=1.0)
     async def destroy_session(self):
         logger.info("Attempting to destroy the current session.")
         if not self.session_token:
@@ -105,6 +111,24 @@ class TastyTradeAuth:
             logger.error(f"RequestError while destroying session: {e}")
             raise APIError(f"An error occurred while requesting {e.request.url!r}") from e
 
+    async def is_session_valid(self) -> bool:
+        if self.session_token and self.session_expiration:
+            return datetime.now() < self.session_expiration
+        return False
+    
+    async def ensure_session(self, username: str, password: Optional[str] = None):
+        if not await self.is_session_valid():
+            remember_token = load_token()
+            if remember_token:
+                logger.info("Session expried. Attempting to renew using remember token.")
+                await self.create_session(username=username,remember_token=remember_token)
+            elif password:
+                logger.info("Session expired. Re-authenticating using password.")
+                await self.create_session(username=username, password=password)
+            else:
+                logger.error("Cannot renew session: No Remember Token or Password Available.")
+                raise APIError("Session Expired and no credentials available for renewal.")
+            
     async def handle_error(self, response: httpx.Response):
         try:
             error = response.json().get("error", {})
@@ -137,15 +161,5 @@ class TastyTradeAuth:
         except json.JSONDecodeError:
             logger.error(f"Failed to decode JSON from response: {response.text}")
             response.raise_for_status()
-
-                
-            
-        
-                
-        
-        
-        
-        
-        
 
 
