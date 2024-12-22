@@ -1,123 +1,110 @@
-import os
+import time
 import asyncio
-from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
-from tastytrade import Session, DXLinkStreamer
-from tastytrade.dxfeed import Candle
-
-# Configure logging
 import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from datetime import datetime, timedelta, timezone
+from SlackBot.Utils import config
+from SlackBot.Source.data import Data
+from SlackBot.Source.studies import Studies
+from SlackBot.Utils.utils import Utilities
+from SlackBot.Source.constant import symbols
+from logs.Logging_Config import setup_logging
+import os
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from zoneinfo import ZoneInfo
 
-# Load environment variables from .env file
-load_dotenv()
+# ----------------- Alerts ----------------- #
 
-USERNAME = os.getenv("TASTY_USER")
-PASSWORD = os.getenv("TASTY_PASS")
+from SlackBot.Alerts.Conditional.Playbook.pvat import Pvat
+from SlackBot.Alerts.Conditional.Contextual.neutral import Neutral
+from SlackBot.Alerts.Periodic.ib_check import IB_Check
+from SlackBot.Alerts.Periodic.economic import Econ # Econ Will Contain Methods to Store The Days Economic events for #BSND
+from SlackBot.Alerts.Periodic.gap_check import Gap_Check
+from SlackBot.Alerts.Periodic.lunch import Lunch
 
-async def fetch_historical_candles(symbols, interval, start_time, end_time, extended_trading_hours=False):
-    """
-    Fetch historical candle data for given symbols.
-
-    :param symbols: List of stock symbols (e.g., ['AAPL', 'MSFT'])
-    :param interval: Candle interval (e.g., '5m', '1h')
-    :param start_time: Start time as timezone-aware datetime object
-    :param end_time: End time as timezone-aware datetime object
-    :param extended_trading_hours: Include extended trading hours
-    :return: Dictionary with symbols as keys and lists of candle data as values
-    """
-    # Initialize session
-    session = Session(login=USERNAME, password=PASSWORD)
-    
-    # Initialize data storage
-    candles_data = {symbol: [] for symbol in symbols}
-    
-    async with DXLinkStreamer(session) as streamer:
-        # Subscribe to candle data
-        await streamer.subscribe_candle(
-            symbols=symbols,
-            interval=interval,
-            start_time=start_time,
-            extended_trading_hours=extended_trading_hours
-        )
-        
-        # Define an asynchronous generator to listen for candles
-        async for event in streamer.listen(Candle):
-            # Debug: Print all attributes of the event
-            # print(dir(event))  # Uncomment if you need to inspect attributes
-            
-            # Access the correct attribute for the symbol
-            symbol = event.event_symbol  # Updated from event.symbol to event.event_symbol
-            if symbol in candles_data:
-                candles_data[symbol].append(event)
-                logger.info(f"Received candle for {symbol}: {event}")
-                
-                # Convert event.time to timezone-aware datetime if necessary
-                if isinstance(event.time, (int, float)):
-                    event_time = datetime.fromtimestamp(event.time / 1000, tz=timezone.utc)
-                elif isinstance(event.time, datetime) and event.time.tzinfo is not None:
-                    event_time = event.time
-                else:
-                    # Handle unexpected formats or make assumptions
-                    event_time = datetime.fromtimestamp(event.time / 1000, tz=timezone.utc)
-                
-                if event_time >= end_time:
-                    logger.info(f"Reached end_time for {symbol}. Unsubscribing...")
-                    await streamer.unsubscribe_candle(
-                        symbols=[symbol],
-                        interval=interval,
-                        start_time=start_time,
-                        extended_trading_hours=extended_trading_hours
-                    )
-                    
-                    # Check if all symbols have reached end_time
-                    all_done = all(
-                        any(
-                            (datetime.fromtimestamp(candle.time / 1000, tz=timezone.utc) if isinstance(candle.time, (int, float)) else candle.time) >= end_time
-                            for candle in candles_data[sym]
-                        )
-                        for sym in symbols
-                    )
-                    if all_done:
-                        logger.info("All symbols have reached end_time. Exiting listener loop.")
-                        break  # Exit the listening loop
-    
-    return candles_data
-
-def get_unix_epoch_ms(dt: datetime) -> int:
-    """
-    Convert a timezone-aware datetime object to Unix epoch time in milliseconds.
-
-    :param dt: Timezone-aware datetime object
-    :return: Unix epoch time in milliseconds
-    """
-    return int(dt.timestamp() * 1000)
+# ----------------- Alerts ----------------- #
 
 async def main():
+    start_time = time.time()
     
-    symbols = ['/ES', '/NQ', '/RTY', '/CL']
-    interval = '5m'  
+    # Setup Logging
+    setup_logging()
+    logger = logging.getLogger(__name__)
     
-    # Define the time range for historical data using timezone-aware datetime objects
-    end_datetime = datetime.now(timezone.utc)
-    start_datetime = end_datetime - timedelta(days=7)  # Last 7 days
-
-    # Fetch historical candles
-    candles = await fetch_historical_candles(
-        symbols=symbols,
-        interval=interval,
-        start_time=start_datetime,
-        end_time=end_datetime,
-        extended_trading_hours=True
+    # Initialization 
+    data = Data()
+    studies = Studies()
+    utils = Utilities()
+    
+    logger.debug()
+    es_bias, nq_bias, rty_bias, cl_bias = utils.grab_bias(config.set_bias)
+    config.set_bias(es_bias, nq_bias, rty_bias, cl_bias)
+    logger.debug()
+    
+# --------------- APSCHEDULER --------------- #
+# This means that there needs to be a way for Conditional Alerts to be Fed Real time data
+# and for periodic alerts, they need to be able to grab the data they need at a moments notice.
+# Feed Data, Read Data.
+    est = ZoneInfo('America/New_York')
+    scheduler = BackgroundScheduler(timezone=est)
+    
+    # Schedule Econ Alert at 8:45 AM EST every day
+    scheduler.add_job(
+        Econ.send_alert,
+        trigger=CronTrigger(hour=8, minute=45, timezone=est),
+        name='Economic Alert'
     )
-
-    # Example: Print the number of candles fetched for each symbol
-    for symbol, data in candles.items():
-        logger.info(f"Total candles fetched for {symbol}: {len(data)}")
-
+    # Schedule Gap Check Equity 9:30 AM EST every day
+    scheduler.add_job(
+        Gap_Check.send_alert,
+        trigger=CronTrigger(hour=9, minute=30,second=5, timezone=est),
+        name='Gap Check Equity'
+    )      
+    # Schedule Gap Check Crude at 9:00 AM EST every day
+    scheduler.add_job(
+        Gap_Check.send_alert,
+        trigger=CronTrigger(hour=9, minute=0, second=6, timezone=est),
+        name='Gap Check Crude'
+    )    
+    # Schedule IB Equity Alert at 10:30 AM EST every day
+    scheduler.add_job(
+        IB_Check.send_alert,
+        trigger=CronTrigger(hour=10, minute=30, second=1, timezone=est),
+        name='IB Equity Alert'
+    )
+    # Schedule IB Crude Alert at 10:00 AM EST every day
+    scheduler.add_job(
+        IB_Check.send_alert,
+        trigger=CronTrigger(hour=10, minute=00, second=1, timezone=est),
+        name='IB Crude Alert'
+    )
+    # Schedule Equity Lunch Alert at 12:00 PM EST every day
+    scheduler.add_job(
+        Lunch.send_alert,
+        trigger=CronTrigger(hour=12, minute=00, second=1, timezone=est),
+        name='IB Crude Alert'
+    )    
+    scheduler.start()
+    logger.info("APScheduler started.")      
+    
+    # Main Loop
+    async for candle in data.stream_candle_data(symbols, '5min'):
+        await data.write_data([candle])
+        
+        # Feed Relavent Data to Studies
+        
+        # Feed Relavent Studies to Alerts
+        
+        # Conditonal Alerts
+        
+        # Periodic Alerts
+        
+        symbol = candle['EventSymbol']
+        df = await data.read_data(symbol, limit=200)
+    
+    # Exit Point and Exit Logic
+    # Build Auto Exit Logic (No Need for user input)
+    # Export Alerts to google sheets
+    
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
