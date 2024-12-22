@@ -1,5 +1,5 @@
-# data_fetch.py
-# data_fetch.py will be responsible for fetching data from external sources.
+# data.py
+# data.py will be responsible for handling data from the API source and then storing it into a database for studies to be build on.
 import asyncio
 import os 
 import logging
@@ -16,6 +16,9 @@ class Data():
         pass
     async def fetch_option_data(self, symbol, period, start_date, end_date, data_type):
         # Fetch Option data from api source and return it in a structured manner for write data to store it into a database. Needs to be able to handle Real time and historical data.
+        pass
+    async def stream_candle_data(self, symbol, period, start_date, end_date, data_type):
+        # Stream Data from API Source and return it in a structured manner for write data to store it into a database. Needs to be able to handle Real time and historical data.
         pass
     async def write_data(self, data, data_type):
         # Needs to be able to store data from historical data sources and real time data sources into a databse

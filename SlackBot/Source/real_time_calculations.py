@@ -1,13 +1,16 @@
 import pandas as pd
 from sqlalchemy import create_engine
 import time
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Database configuration
-DB_USER = 'data_ingestor'
-DB_PASSWORD = 'Adrianj7769!'  # Replace with your actual password
-DB_HOST = 'localhost'
-DB_PORT = '5432'
-DB_NAME = 'rpi_algo'
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')  
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
 
 # Create SQLAlchemy engine
 engine = create_engine(

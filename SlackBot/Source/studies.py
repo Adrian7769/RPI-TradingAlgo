@@ -1,3 +1,4 @@
+# studies.py
 from SlackBot.Source.data import Data
 
 class Studies():
