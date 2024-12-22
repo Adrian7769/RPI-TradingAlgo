@@ -1,11 +1,12 @@
 # Contains functions to fectch system data and interact with RPI5 Hardware
 
 from logs.Logging_Config import setup_logging
-from gpiozero import TonalBuzzer
+from gpiozero import Buzzer
 from RPLCD.i2c import CharLCD
 import os
 import logging 
 import time
+from typing import Optional
 
 # Setup Logging
 setup_logging()
@@ -24,7 +25,7 @@ lcd = CharLCD(
 )
 
 # Initialize Buzzer once
-buzzer = TonalBuzzer(17) 
+buzzer = Buzzer(17) 
 
 def get_cpu_load():
     """Retrieve the current CPU load as a percentage."""
@@ -57,19 +58,17 @@ def display_info():
         lcd.write_string(load)
         lcd.cursor_pos = (1, 0)  
         lcd.write_string(temp)
-        lcd.write_string(
-            
-        )
+        lcd.write_string()
     except Exception as e:
         logger.error(f"Failed to activate LCD display: {e}")
 
-def activate_buzzer(frequency=660, duration=1):
+def activate_buzzer(duration: Optional[int] = None):
     """Activate the buzzer with a specific frequency and duration."""
     try:
-        logger.info(f"Activating buzzer with frequency {frequency}Hz for {duration} seconds")
-        buzzer.play(frequency)
+        logger.info(f"Activating buzzer")
+        buzzer.on()
         time.sleep(duration)
-        buzzer.stop()
+        buzzer.off()
         logger.info("Buzzer deactivated")
     except Exception as e:
         logger.error(f"Failed to activate buzzer: {e}")
@@ -90,6 +89,7 @@ def check_thresholds(cpu_load, cpu_temp):
 
 def main():
     """Main loop to update the LCD and check thresholds."""
+    duration = 0.05
     try:
         while True:
             display_info()
@@ -97,12 +97,12 @@ def main():
             try:
                 load_value = float(get_cpu_load().split(": ")[1].replace("%", ""))
                 temp_value = float(get_cpu_temp().split(": ")[1].replace("C", ""))
-                activate_buzzer()
+                #activate_buzzer(duration=duration)
                 check_thresholds(load_value, temp_value)
             except (IndexError, ValueError) as e:
                 logger.error(f"Error parsing CPU metrics: {e}")
             
-            time.sleep(1)  # Update every second
+            time.sleep(0.05)  # Update every second
     except KeyboardInterrupt:
         lcd.clear()
         lcd.close()  # Properly close the LCD connection
