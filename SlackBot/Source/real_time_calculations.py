@@ -2,14 +2,12 @@ import pandas as pd
 from sqlalchemy import create_engine
 import time
 
-
 # Database configuration
 DB_USER = 'data_ingestor'
 DB_PASSWORD = 'Adrianj7769!'  # Replace with your actual password
 DB_HOST = 'localhost'
 DB_PORT = '5432'
 DB_NAME = 'rpi_algo'
-
 
 # Create SQLAlchemy engine
 engine = create_engine(

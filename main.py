@@ -95,12 +95,10 @@ def get_unix_epoch_ms(dt: datetime) -> int:
     return int(dt.timestamp() * 1000)
 
 async def main():
-    # Define the symbols you want to fetch
-    symbols = ['AAPL']
-
-    # Define the candle interval
-    interval = '5m'  # Options: '15s', '5m', '1h', '3d', '1w', '1mo', etc.
-
+    
+    symbols = ['/ES', '/NQ', '/RTY', '/CL']
+    interval = '5m'  
+    
     # Define the time range for historical data using timezone-aware datetime objects
     end_datetime = datetime.now(timezone.utc)
     start_datetime = end_datetime - timedelta(days=7)  # Last 7 days
@@ -111,7 +109,7 @@ async def main():
         interval=interval,
         start_time=start_datetime,
         end_time=end_datetime,
-        extended_trading_hours=False  # Set to True if you want extended hours
+        extended_trading_hours=True
     )
 
     # Example: Print the number of candles fetched for each symbol
