@@ -11,6 +11,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 class Base_Alerts:
+    # Re-Factor For Discord Channels
     slack_channels_playbook = {
         'ES': 'playbook_es',
         'NQ': 'playbook_nq',
