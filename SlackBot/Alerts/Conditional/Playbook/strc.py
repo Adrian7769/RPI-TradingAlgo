@@ -141,6 +141,7 @@ class Strc(Base_Alerts):
             start_time = self.crude_pvat_start
             end_time = self.crude_ib
             logger.debug(f" PVAT | time_window | Product: {self.product_name} | Time Window: {start_time} - {end_time}")
+            
         elif self.product_name in ['ES', 'RTY', 'NQ']:
             start_time = self.equity_pvat_start
             end_time = self.equity_ib
