@@ -82,7 +82,6 @@ class Data():
         # Fetch Option data from api source and return it in a structured manner for write data to store it into a database. Needs to be able to handle Real time and historical data.
         pass
     
-    
     # Method to Stream Candle Data from API Source and return it in a structured manner.
     async def stream_candle_data(self, symbol, period, start_date, end_date, data_type):
         async with DXLinkStreamer(self.session) as streamer:
